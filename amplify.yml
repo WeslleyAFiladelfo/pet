@@ -1,13 +1,17 @@
 version: 1
 frontend:
   phases:
+    preBuild:
+      commands:
+        - npm install
     build:
       commands:
-        - echo "Nenhuma etapa de build do frontend é necessária para este projeto"
+        - npm run compile
+        - npm run build
   artifacts:
-    baseDirectory: /   # Isso depende do local onde seus arquivos de frontend serão servidos pelo Express
+    baseDirectory: /
     files:
-      - '**/*'   # Aqui, você está incluindo todos os arquivos do projeto
+      - '**/*'
   cache:
     paths:
       - node_modules/**/*
@@ -17,10 +21,4 @@ backend:
     build:
       commands:
         - npm install
-  artifacts:
-    baseDirectory: /
-    files:
-      - '**/*'   # Inclua todos os arquivos do projeto backend
-  cache:
-    paths:
-      - node_modules/**/*
+        - npm run build

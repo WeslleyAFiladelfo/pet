@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "compile": "sass public/main.scss public/css/main.css"
+    "compile": "sass public/main.scss public/css/main.css",
+    "build": "npm run compile"
   },
   "author": "Weslley A. Filadelfo",
   "license": "MIT",
