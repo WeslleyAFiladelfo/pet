@@ -9,7 +9,7 @@ const { name } = require('ejs');
 const LocalStrategy = require('passport-local').Strategy;
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 // Configuração da sessão com variável de ambiente
 const secretKey = process.env.SESSION_SECRET || 'sua_chave_secreta_aqui';
