@@ -1,17 +1,14 @@
 version: 1
 frontend:
   phases:
-    # Aqui você pode adicionar comandos para instalar dependências do frontend
     build:
       commands:
         - echo "Nenhuma etapa de build do frontend é necessária para este projeto"
   artifacts:
-    # Especifique o diretório onde seus arquivos de build serão gerados
     baseDirectory: /   # Isso depende do local onde seus arquivos de frontend serão servidos pelo Express
     files:
       - '**/*'   # Aqui, você está incluindo todos os arquivos do projeto
   cache:
-    # Configure o cache para acelerar a compilação
     paths:
       - node_modules/**/*
 
@@ -19,14 +16,11 @@ backend:
   phases:
     build:
       commands:
-        # Aqui você pode adicionar comandos para instalar dependências do backend
         - npm install
   artifacts:
-    # Aqui você especifica o diretório onde seus arquivos de backend serão gerados após a compilação
     baseDirectory: /
     files:
       - '**/*'   # Inclua todos os arquivos do projeto backend
   cache:
-    # Configure o cache para acelerar a compilação
     paths:
       - node_modules/**/*
