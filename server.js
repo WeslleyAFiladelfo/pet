@@ -619,9 +619,17 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Rota para servir a página de menu (menu.html)
-app.get('/menu', (req, res) => {
-    res.sendFile(path.join(__dirname, 'menu.html'));
+// Rota para a página de menu
+app.get('/menu', isAuthenticated, (req, res) => {
+    const username = req.session.username;
+
+    if (username === 'weslley.filadelfo') {
+        res.render('menu', { showAllButtons: true });
+    } else if (username === 'farmacia.veros') {
+        res.render('menu', { showAllButtons: false });
+    } else {
+        res.status(401).send('Acesso não autorizado');
+    }
 });
 
 
