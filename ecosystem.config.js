@@ -1,7 +1,7 @@
 module.exports = {
   apps: [{
     name: 'cadastro-pet',
-    script: './server.js',
+    script: './Cadastro_pet/server.js',
     instances: 'max',
     exec_mode: 'cluster',
     env: {
