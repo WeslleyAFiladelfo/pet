@@ -1,13 +1,14 @@
 module.exports = {
   apps: [{
-    name: "app",
-    script: "server.js",
-    instances:"max",
+    name: 'cadastro-pet',
+    script: './server.js',
+    instances: 'max',
+    exec_mode: 'cluster',
     env: {
-      NODE_ENV: "development",
+      NODE_ENV: 'development'
     },
     env_production: {
-      NODE_ENV: "production",
+      NODE_ENV: 'production'
     }
   }]
-}
+};
