@@ -7,8 +7,7 @@
     "start": "pm2-runtime start ecosystem.config.js --env production",
     "dev": "nodemon server.js",
     "compile": "sass public/main.scss public/css/main.css",
-    "build": "npm run compile",
-    "postinstall": "npm rebuild"
+    "build": "npm run compile"
   },
   "author": "Weslley A. Filadelfo",
   "license": "MIT",
