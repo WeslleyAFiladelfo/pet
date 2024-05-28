@@ -4,31 +4,37 @@ services:
     env: node
     plan: free
     buildCommand: 'npm install'
-    startCommand: 'pm2-runtime start ecosystem.config.js --env production'
+    startCommand: 'node server.js'
     envVars:
       - key: SESSION_SECRET
-        sync: false # Defina como true se você quiser sincronizar com um Secret Group
-        value: sua_chave_secreta_aqui # Substitua pela chave secreta real ou configure um Secret Group
-    staticPublishPath: public
+        sync: false
+        value: sua_chave_secreta_aqui
+      # Variáveis de ambiente para se conectar ao PostgreSQL
+      - key: PGUSER
+        value: cadastrope_db_user
+      - key: PGHOST
+        value: dpg-cpb24lo21fec739au4ng-a
+      - key: PGDATABASE
+        value: cadastrope_db
+      - key: PGPASSWORD
+        value: gdZ4SNLQMwYASonDB8fyyl4PHRRZRlhs
+      - key: PGPORT
+        value: '5432' // Porta padrão do PostgreSQL
 
-    # Configuração do serviço do SQLite
-    sqlite:
-      - name: database
-        databaseFile: database.sqlite
-        migrationsDir: migrations # Certifique-se de que este diretório exista e contenha suas migrações
+    staticPublishPath: public
 
     # Opções de saúde e tempo limite
     healthCheckPath: '/'
     autoDeploy: true
-    buildTimeoutSeconds: 600 # Ajuste conforme necessário
+    buildTimeoutSeconds: 600
 
     # Volume para persistência de dados
     volumes:
-      - name: sqlite-data
+      - name: postgresql-data // Renomeie o volume para postgresql-data
         mountPath: /data
 
-      # Eventos de ciclo de vida do serviço
+    # Eventos de ciclo de vida do serviço
     lifecycle:
       postdeploy:
-        - command: 'npm run migrate' # Certifique-se de que esse comando exista no seu package.json
+        - command: 'npm run migrate'
           name: 'Run migrations'

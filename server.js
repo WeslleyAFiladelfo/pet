@@ -3,6 +3,7 @@ const path = require('path');
 const session = require('express-session');
 const { body, validationResult } = require('express-validator');
 const { v4: uuidv4 } = require('uuid');
+const { Pool } = require('pg');
 const sqlite3 = require('sqlite3').verbose();
 const { sendNotificationEmail } = require('./emailSender');
 const { name } = require('ejs');
@@ -31,13 +32,27 @@ app.set('view engine', 'ejs');
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Configuração do banco de dados SQLite
-const db = new sqlite3.Database('database.sqlite', (err) => {
-    if (err) {
-        console.error('Erro ao conectar ao banco de dados:', err.message);
-    } else {
-        console.log('Conexão com o banco de dados estabelecida.');
-    }
-});
+if (process.env.NODE_ENV === 'production') {
+    // Configuração para PostgreSQL em ambiente de produção
+    const pool = new Pool({
+        user: 'cadastrope_db_user',
+        host: 'postgres://cadastrope_db_user:gdZ4SNLQMwYASonDB8fyyl4PHRRZRlhs@dpg-cpb24lo21fec739au4ng-a/cadastrope_db',
+        database: 'postgres://cadastrope_db_user:gdZ4SNLQMwYASonDB8fyyl4PHRRZRlhs@dpg-cpb24lo21fec739au4ng-a.ohio-postgres.render.com/cadastrope_db',
+        password: 'sgdZ4SNLQMwYASonDB8fyyl4PHRRZRlhs',
+        port: 5432,
+    });
+
+    db = pool;
+} else {
+    // Configuração para SQLite em ambiente de desenvolvimento/local
+    db = new sqlite3.Database('database.sqlite', (err) => {
+        if (err) {
+            console.error('Erro ao conectar ao banco de dados SQLite:', err.message);
+        } else {
+            console.log('Conexão com o banco de dados SQLite estabelecida.');
+        }
+    });
+}
 
 // Middleware para verificar autenticação e autorização
 function authenticateAndAuthorize(req, res, next) {
