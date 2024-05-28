@@ -1,24 +1,10 @@
-version: 1
-frontend:
-  phases:
-    preBuild:
-      commands:
-        - npm install
-    build:
-      commands:
-        - npm run compile
-        - npm run build
-  artifacts:
-    baseDirectory: /
-    files:
-      - '**/*'
-  cache:
-    paths:
-      - node_modules/**/*
-
-backend:
-  phases:
-    build:
-      commands:
-        - npm install
-        - npm run build
+services:
+  - type: web
+    name: cadastro-pet
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
