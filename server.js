@@ -7,6 +7,7 @@ const sqlite3 = require('sqlite3').verbose();
 const { sendNotificationEmail } = require('./emailSender');
 const { name } = require('ejs');
 const LocalStrategy = require('passport-local').Strategy;
+require("dotenv/config");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -619,17 +620,9 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Rota para a página de menu
-app.get('/menu', isAuthenticated, (req, res) => {
-    const username = req.session.username;
-
-    if (username === 'weslley.filadelfo') {
-        res.render('menu', { showAllButtons: true });
-    } else if (username === 'farmacia.veros') {
-        res.render('menu', { showAllButtons: false });
-    } else {
-        res.status(401).send('Acesso não autorizado');
-    }
+// Rota para servir a página de menu (menu.html)
+app.get('/menu', (req, res) => {
+    res.sendFile(path.join(__dirname, 'menu.html'));
 });
 
 
