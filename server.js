@@ -10,7 +10,7 @@ const LocalStrategy = require('passport-local').Strategy;
 require("dotenv/config");
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 4000;
 
 // Configuração da sessão com variável de ambiente
 const secretKey = process.env.SESSION_SECRET || 'sua_chave_secreta_aqui';
@@ -691,7 +691,7 @@ function generateRandomCode() {
 
 // Iniciar o servidor
 app.listen(port, () => {
-    console.log(`Servidor rodando em http://localhost:${port}`);
+    console.log(`Servidor rodando em ${port}`);
 });
 
 // Fechar o banco de dados ao finalizar o servidor
