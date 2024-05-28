@@ -1,10 +1,10 @@
 services:
   - type: web
-    name: my-express-app
+    name: cadastro-pet
     env: node
     plan: free
     buildCommand: 'npm install'
-    startCommand: 'node server.js'
+    startCommand: 'pm2-runtime start ecosystem.config.js --env production'
     envVars:
       - key: SESSION_SECRET
         sync: false # Defina como true se você quiser sincronizar com um Secret Group
@@ -27,12 +27,7 @@ services:
       - name: sqlite-data
         mountPath: /data
 
-    # Caminhos de log
-    logs:
-      - type: stdout
-        path: /var/log/my-express-app.log
-
-    # Eventos de ciclo de vida do serviço
+      # Eventos de ciclo de vida do serviço
     lifecycle:
       postdeploy:
         - command: 'npm run migrate' # Certifique-se de que esse comando exista no seu package.json
