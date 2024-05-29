@@ -511,6 +511,7 @@ app.post('/salvar_usuario', (req, res) => {
     });
 });
 
+// Executar a criação da tabela solicitacoes apenas se estivermos no ambiente de desenvolvimento/local
 db.serialize(() => {
     db.run(`
         CREATE TABLE IF NOT EXISTS solicitacoes (
@@ -528,6 +529,9 @@ db.serialize(() => {
         }
     });
 });
+
+// Exportar o objeto de banco de dados para uso em outros lugares do aplicativo
+module.exports = db;
 
 app.post('/solicitar_cadastro_produto', (req, res) => {
     const { usuario, descricao } = req.body;
