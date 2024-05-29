@@ -6,8 +6,6 @@ const { v4: uuidv4 } = require('uuid');
 const { Pool } = require('pg');
 const sqlite3 = require('sqlite3').verbose();
 const { sendNotificationEmail } = require('./emailSender');
-const { name } = require('ejs');
-const LocalStrategy = require('passport-local').Strategy;
 require("dotenv/config");
 
 const app = express();
@@ -36,14 +34,17 @@ let db;
 if (process.env.NODE_ENV === 'production') {
     // Configuração para PostgreSQL em ambiente de produção
     const pool = new Pool({
-        user: 'cadastrope_db_user',
-        host: 'postgres://cadastrope_db_user:gdZ4SNLQMwYASonDB8fyyl4PHRRZRlhs@dpg-cpb24lo21fec739au4ng-a/cadastrope_db',
-        database: 'postgres://cadastrope_db_user:gdZ4SNLQMwYASonDB8fyyl4PHRRZRlhs@dpg-cpb24lo21fec739au4ng-a.ohio-postgres.render.com/cadastrope_db',
-        password: 'sgdZ4SNLQMwYASonDB8fyyl4PHRRZRlhs',
-        port: 5432,
+        connectionString: process.env.DATABASE_URL, // Use a variável de ambiente para a URL de conexão
+        ssl: {
+            rejectUnauthorized: false
+        }
     });
 
-    db = pool;
+    db = {
+        run: (sql, params, callback) => pool.query(sql, params, (err, result) => callback(err, result)),
+        get: (sql, params, callback) => pool.query(sql, params, (err, result) => callback(err, result.rows[0])),
+        all: (sql, params, callback) => pool.query(sql, params, (err, result) => callback(err, result.rows))
+    };
 } else {
     // Configuração para SQLite em ambiente de desenvolvimento/local
     db = new sqlite3.Database('database.sqlite', (err) => {
@@ -57,18 +58,13 @@ if (process.env.NODE_ENV === 'production') {
 
 // Middleware para verificar autenticação e autorização
 function authenticateAndAuthorize(req, res, next) {
-    // Verificar se o usuário está autenticado
     if (req.isAuthenticated()) {
-        // Verificar se o usuário tem permissão adequada (por exemplo, admin)
         if (req.user && req.user.role === 'admin') {
-            // Usuário autenticado e autorizado
             return next();
         } else {
-            // Usuário não autorizado (não é admin)
             return res.status(403).send('Acesso proibido. Você não tem permissão para acessar esta rota.');
         }
     } else {
-        // Usuário não autenticado
         return res.status(401).send('Acesso não autorizado. Faça login para acessar esta rota.');
     }
 }
@@ -111,10 +107,7 @@ app.post('/salvar_produto', (req, res) => {
         observacao
     } = req.body;
 
-    // Gerar um token único para o produto
     const token = uuidv4();
-
-    // Preparar os dados do produto para inserção
     const produtoData = {
         codigo,
         descricao,
@@ -152,7 +145,6 @@ app.post('/salvar_produto', (req, res) => {
         token
     };
 
-    // Montar a consulta SQL com placeholders para os valores
     const sql = `
         INSERT INTO produtos (
             codigo,
@@ -192,7 +184,6 @@ app.post('/salvar_produto', (req, res) => {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    // Extrair os valores do objeto produtoData na ordem correta
     const params = [
         produtoData.codigo,
         produtoData.descricao,
@@ -236,29 +227,22 @@ app.post('/salvar_produto', (req, res) => {
             return res.json({ status: 'erro', mensagem: 'Erro ao cadastrar produto' });
         }
     
-        // Enviar e-mail de notificação com link para continuar o cadastro
         const continuationLink = `http://localhost:3000/continuar_cadastro?token=${token}&codigo=${codigo}&descricao=${descricao}&desc_resumida=${desc_resumida}&observacao=${observacao}`;
         const mailOptions = {
             from: 'weslley.filadelfo@veros.vet',
-            to: 'weslley.filadelfo@veros.vet', // Altere para o e-mail do usuário
+            to: 'weslley.filadelfo@veros.vet',
             subject: 'Continuar Cadastro de Produto Pendente',
             text: `Há um cadastro de produto pendente. Clique no link a seguir para continuar o cadastro:\n${continuationLink}`
         };
     
-        // Enviar o e-mail de notificação
         sendNotificationEmail(mailOptions);
-    
-        // Responder com o status de sucesso
         res.json({ status: 'sucesso' });
     });
 });
 
-// Rota para continuar o cadastro com dados preenchidos
 app.get('/continuar_cadastro', (req, res) => {
-    // Lógica para buscar e renderizar os dados do produto pendente
-    const { token } = req.query; // Usar req.query para obter o token da URL
+    const { token } = req.query;
 
-    // Buscar o produto pendente associado ao token no banco de dados
     const selectProductSql = `
         SELECT *
         FROM produtos
@@ -276,7 +260,6 @@ app.get('/continuar_cadastro', (req, res) => {
             return res.status(404).send('Produto pendente não encontrado');
         }
 
-        // Verificar se a propriedade 'tipo_atendimento' está definida antes de passá-la para o template
         const produto = {
             ...row,
             tipo_atendimento: {
@@ -288,13 +271,10 @@ app.get('/continuar_cadastro', (req, res) => {
             }
         };
 
-        // Renderizar a página 'continuar_cadastro.ejs' com os dados preenchidos
         res.render('continuar_cadastro', { produto });
     });
 });
 
-
-// Rota para finalizar o cadastro do produto
 app.post('/finalizar_cadastro_produto', (req, res) => {
     const {
         token,
@@ -325,22 +305,24 @@ app.post('/finalizar_cadastro_produto', (req, res) => {
         valor,
         repasse,
         procedimento_faturamento,
+        tipo_atendimento_ps,
+        tipo_atendimento_ambulatorio,
+        tipo_atendimento_internacao,
+        tipo_atendimento_externo,
+        tipo_atendimento_todos,
         observacao
     } = req.body;
 
-    // Verificar se o token foi fornecido
     if (!token) {
         console.error('Erro: Token não fornecido');
         return res.status(400).send('Token não fornecido');
     }
 
-    // Verificar se todos os dados necessários estão presentes e válidos
     if (!codigo || !descricao || !desc_resumida) {
         console.error('Erro: Dados obrigatórios ausentes ou inválidos');
         return res.status(400).send('Dados obrigatórios ausentes ou inválidos');
     }
 
-    // Atualizar o produto no banco de dados com os novos dados
     const updateProductSql = `
         UPDATE produtos
         SET
@@ -380,62 +362,58 @@ app.post('/finalizar_cadastro_produto', (req, res) => {
         WHERE token = ?
     `;
 
-// Supondo que tipo_atendimento seja inicializado anteriormente
-const tipo_atendimento = {
-    ps: req.body.tipo_atendimento_ps === 'S' ? 1 : 0,
-    ambulatorio: req.body.tipo_atendimento_ambulatorio === 'S' ? 1 : 0,
-    internacao: req.body.tipo_atendimento_internacao === 'S' ? 1 : 0,
-    externo: req.body.tipo_atendimento_externo === 'S' ? 1 : 0,
-    todos: req.body.tipo_atendimento_todos === 'S' ? 1 : 0
-};    
+    const tipo_atendimento = {
+        ps: req.body.tipo_atendimento_ps === 'S' ? 1 : 0,
+        ambulatorio: req.body.tipo_atendimento_ambulatorio === 'S' ? 1 : 0,
+        internacao: req.body.tipo_atendimento_internacao === 'S' ? 1 : 0,
+        externo: req.body.tipo_atendimento_externo === 'S' ? 1 : 0,
+        todos: req.body.tipo_atendimento_todos === 'S' ? 1 : 0
+    };
 
-// Construir o array de parâmetros para a consulta SQL
-const params = [
-    codigo,
-    descricao,
-    desc_resumida,
-    valor_unitario,
-    unidade,
-    kit,
-    consignado,
-    opme,
-    especie,
-    classe,
-    sub_classe,
-    curva_abc,
-    lote,
-    serie,
-    registro_anvisa,
-    etiqueta,
-    medicamento,
-    med_controla,
-    validade,
-    armazenamento_ar_cond === 'S' ? 1 : 0,
-    armazenamento_geladeira === 'S' ? 1 : 0,
-    padronizado,
-    aplicacao,
-    auto_custo,
-    valor,
-    repasse,
-    procedimento_faturamento,
-    tipo_atendimento.ps,
-    tipo_atendimento.ambulatorio,
-    tipo_atendimento.internacao,
-    tipo_atendimento.externo,
-    tipo_atendimento.todos,
-    observacao,
-    token
-];
+    const params = [
+        codigo,
+        descricao,
+        desc_resumida,
+        valor_unitario,
+        unidade,
+        kit,
+        consignado,
+        opme,
+        especie,
+        classe,
+        sub_classe,
+        curva_abc,
+        lote,
+        serie,
+        registro_anvisa,
+        etiqueta,
+        medicamento,
+        med_controla,
+        validade,
+        armazenamento_ar_cond === 'S' ? 1 : 0,
+        armazenamento_geladeira === 'S' ? 1 : 0,
+        padronizado,
+        aplicacao,
+        auto_custo,
+        valor,
+        repasse,
+        procedimento_faturamento,
+        tipo_atendimento.ps,
+        tipo_atendimento.ambulatorio,
+        tipo_atendimento.internacao,
+        tipo_atendimento.externo,
+        tipo_atendimento.todos,
+        observacao,
+        token
+    ];
 
-// Executar a consulta SQL de atualização
-db.run(updateProductSql, params, function(err) {
-    if (err) {
-        console.error('Erro ao atualizar produto:', err);
-        return res.status(500).json({ status: 'erro', mensagem: 'Erro ao atualizar produto' });
-    }
+    db.run(updateProductSql, params, function(err) {
+        if (err) {
+            console.error('Erro ao atualizar produto:', err);
+            return res.status(500).json({ status: 'erro', mensagem: 'Erro ao atualizar produto' });
+        }
 
-        // Enviar e-mail de notificação para quem iniciou o cadastro
-        const userEmail = 'cadastro_pet@outlook.com'; // E-mail do destinatário
+        const userEmail = 'cadastro_pet@outlook.com';
         const mailOptions = {
             from: 'cadastro_pet@outlook.com',
             to: userEmail,
@@ -443,14 +421,10 @@ db.run(updateProductSql, params, function(err) {
             text: `O produto com código ${codigo} e descrição ${descricao} foi cadastrado no sistema MV com sucesso. Observação: ${observacao}.`
         };
 
-        // Enviar o e-mail de notificação utilizando a função atualizada
         sendNotificationEmail(mailOptions);
-
-        // Responder com o status de sucesso
         res.json({ status: 'sucesso' });
     });
 });
-
 
 // Rota para obter todos os setores cadastrados
 app.get('/get_setores', (req, res) => {
@@ -467,7 +441,6 @@ app.get('/get_setores', (req, res) => {
 app.post('/index', (req, res) => {
     const { username, email } = req.body;
 
-    // Consultar o banco de dados para encontrar o usuário
     db.get('SELECT * FROM users WHERE username = ? OR email = ?', [username, email], (err, row) => {
         if (err) {
             console.error('Erro ao autenticar usuário:', err);
@@ -478,20 +451,15 @@ app.post('/index', (req, res) => {
             return res.status(401).send('Usuário não encontrado');
         }
 
-        // Armazenar as informações de autenticação na sessão
         req.session.authenticated = true;
         req.session.username = username;
         req.session.email = row.email;
 
-        // Redirecionar com base no usuário autenticado
         if (username === 'farmacia.veros' && row.email === 'farmacia.pet@outlook.com') {
-            // Redirecionar para tela de usuário padrão
             res.redirect('/menu');
         } else if (username === 'weslley.filadelfo' && row.email === 'weslleyafiladelfo@gmail.com') {
-            // Redirecionar para o menu geral
             res.redirect('/menu');
         } else {
-            // Credenciais inválidas
             res.status(401).send('Credenciais inválidas');
         }
     });
@@ -507,13 +475,10 @@ app.get('/menu', isAuthenticated, (req, res) => {
     const username = req.session.username;
 
     if (username === 'weslley.filadelfo') {
-        // Renderiza menu completo para o usuário weslley.filadelfo
         res.render('menu', { showAllButtons: true });
     } else if (username === 'farmacia.veros') {
-        // Renderiza menu restrito para o usuário farmacia.veros
         res.render('menu', { showAllButtons: false });
     } else {
-        // Usuário não autorizado
         res.status(401).send('Acesso não autorizado');
     }
 });
@@ -521,10 +486,8 @@ app.get('/menu', isAuthenticated, (req, res) => {
 // Middleware para verificar autenticação
 function isAuthenticated(req, res, next) {
     if (req.session.authenticated) {
-        // Se o usuário estiver autenticado, prossiga
         next();
     } else {
-        // Se não estiver autenticado, redirecione para o login
         res.redirect('/');
     }
 }
@@ -533,12 +496,10 @@ function isAuthenticated(req, res, next) {
 app.post('/salvar_usuario', (req, res) => {
     const { name, email, username, setor_id } = req.body;
 
-    // Verificar se todos os campos obrigatórios foram enviados
     if (!name || !email || !username || !setor_id) {
         return res.status(400).send('Todos os campos devem ser preenchidos.');
     }
 
-    // Inserir novo usuário no banco de dados
     const sql = 'INSERT INTO users (name, email, username, setor_id) VALUES (?, ?, ?, ?)';
     db.run(sql, [name, email, username, setor_id], function(err) {
         if (err) {
@@ -549,7 +510,6 @@ app.post('/salvar_usuario', (req, res) => {
     });
 });
 
-// Criar a tabela de solicitações (caso não exista)
 db.serialize(() => {
     db.run(`
         CREATE TABLE IF NOT EXISTS solicitacoes (
@@ -568,11 +528,9 @@ db.serialize(() => {
     });
 });
 
-// Rota para processar solicitação de cadastro de produto
 app.post('/solicitar_cadastro_produto', (req, res) => {
     const { usuario, descricao } = req.body;
 
-    // Salvar a solicitação no banco de dados
     const sql = `
         INSERT INTO solicitacoes (usuario, descricao)
         VALUES (?, ?)
@@ -589,7 +547,6 @@ app.post('/solicitar_cadastro_produto', (req, res) => {
     });
 });
 
-// Rota para listar todas as solicitações do banco de dados
 app.get('/listar_solicitacoes', (req, res) => {
     const sql = `
         SELECT * FROM solicitacoes
@@ -605,16 +562,13 @@ app.get('/listar_solicitacoes', (req, res) => {
     });
 });
 
-// Rota para salvar um novo setor
 app.post('/salvar_setor', (req, res) => {
     const { nome, responsavel } = req.body;
 
-    // Verificar se o nome do setor foi enviado
     if (!nome) {
         return res.status(400).send('O nome do setor é obrigatório.');
     }
 
-    // Inserir o novo setor no banco de dados
     const sql = 'INSERT INTO setores (nome, responsavel) VALUES (?, ?)';
     db.run(sql, [nome, responsavel], function(err) {
         if (err) {
@@ -625,29 +579,23 @@ app.post('/salvar_setor', (req, res) => {
     });
 });
 
- // Rota para servir o arquivo JavaScript (cadastroSetor.js)
 app.get('/cadastroSetor.js', (req, res) => {
     res.setHeader('Content-Type', 'application/javascript');
     res.sendFile(path.join(__dirname, 'cadastroSetor.js'));
 });
 
-// Rota para servir a página de login (login.html)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Rota para servir a página de menu (menu.html)
 app.get('/menu', (req, res) => {
     res.sendFile(path.join(__dirname, 'menu.html'));
 });
 
-
-// Rota para servir o arquivo usuario.html
 app.get('/usuario.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'usuario.html'));
 });
 
-// Rota para servir o arquivo setor.html
 app.get('/setor.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'setor.html'));
 });
@@ -663,22 +611,17 @@ app.get('/alterarUsuario.html', (req, res) => {
     });
 });
 
-
 app.get('/cadastro_produto', isAuthenticated, (req, res) => {
     res.sendFile(path.join(__dirname, 'cadastro_produto.html'));
 });
 
-// Rota para servir o arquivo procedimento.html
 app.get('/procedimento.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'procedimento.html'));
 });
 
-// Rota para renderizar a página HTML
 app.get('/historico_solicitacoes.html', (req, res) => {
-    // Conectar ao banco de dados SQLite
     let db = new sqlite3.Database('database.sqlite');
 
-    // Consulta ao banco de dados para recuperar as solicitações
     db.all('SELECT * FROM produtos', (err, rows) => {
         if (err) {
             console.error(err.message);
@@ -686,37 +629,29 @@ app.get('/historico_solicitacoes.html', (req, res) => {
             return;
         }
 
-        // Renderiza a página HTML com os dados recuperados do banco de dados
         res.render('historico_solicitacoes', { solicitudes: rows });
     });
 
-    // Fechar a conexão com o banco de dados após a consulta
     db.close();
 });
 
-// Rota para lidar com outros erros não tratados
 app.use((err, req, res, next) => {
     console.error('Erro no servidor:', err);
     res.status(500).send('Erro interno no servidor');
 });
 
-// Função para gerar um código aleatório único
-function generateRandomCode() {
-    return Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
-}
-
-// Iniciar o servidor
 app.listen(port, () => {
     console.log(`Servidor rodando em ${port}`);
 });
 
-// Fechar o banco de dados ao finalizar o servidor
 process.on('exit', () => {
-    db.close((err) => {
-        if (err) {
-            console.error('Erro ao fechar conexão com o banco de dados:', err.message);
-        } else {
-            console.log('Conexão com o banco de dados fechada.');
-        }
-    });
+    if (process.env.NODE_ENV !== 'production') {
+        db.close((err) => {
+            if (err) {
+                console.error('Erro ao fechar conexão com o banco de dados:', err.message);
+            } else {
+                console.log('Conexão com o banco de dados fechada.');
+            }
+        });
+    }
 });
