@@ -30,7 +30,7 @@ app.set('view engine', 'ejs');
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Configuração do banco de dados
-let db;
+let pool;
 if (process.env.NODE_ENV === 'production') {
     // Configuração para PostgreSQL em ambiente de produção
     const pool = new Pool({
