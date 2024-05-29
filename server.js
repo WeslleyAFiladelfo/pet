@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
 const { body, validationResult } = require('express-validator');
 const { v4: uuidv4 } = require('uuid');
 const { Pool } = require('pg');
