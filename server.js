@@ -4,7 +4,6 @@ const session = require('express-session');
 const { body, validationResult } = require('express-validator');
 const { v4: uuidv4 } = require('uuid');
 const { Pool } = require('pg');
-const sqlite3 = require('sqlite3').verbose();
 const { sendNotificationEmail } = require('./emailSender');
 require("dotenv/config");
 
@@ -29,7 +28,7 @@ app.set('view engine', 'ejs');
 // Configuração do diretório de arquivos estáticos (CSS, imagens, HTML, etc.)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Configuração do banco de dados SQLite
+// Configuração do banco de dados
 let db;
 if (process.env.NODE_ENV === 'production') {
     // Configuração para PostgreSQL em ambiente de produção
@@ -47,6 +46,7 @@ if (process.env.NODE_ENV === 'production') {
     };
 } else {
     // Configuração para SQLite em ambiente de desenvolvimento/local
+    const sqlite3 = require('sqlite3').verbose();
     db = new sqlite3.Database('database.sqlite', (err) => {
         if (err) {
             console.error('Erro ao conectar ao banco de dados SQLite:', err.message);
