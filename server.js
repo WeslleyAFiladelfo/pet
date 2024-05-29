@@ -34,6 +34,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 let db;
 if (process.env.NODE_ENV === 'production') {
     // Configuração para PostgreSQL em ambiente de produção
+    const { Pool } = require('pg');
     const pool = new Pool({
         connectionString: process.env.DATABASE_URL, // Use a variável de ambiente para a URL de conexão
         ssl: {
@@ -57,6 +58,9 @@ if (process.env.NODE_ENV === 'production') {
         }
     });
 }
+
+// Exportar o objeto de banco de dados para uso em outros lugares do aplicativo
+module.exports = db;
 
 // Middleware para verificar autenticação e autorização
 function authenticateAndAuthorize(req, res, next) {
@@ -511,28 +515,6 @@ app.post('/salvar_usuario', (req, res) => {
         res.status(200).json({ message: 'Usuário cadastrado com sucesso!' });
     });
 });
-
-// Executar a criação da tabela solicitacoes apenas se estivermos no ambiente de desenvolvimento/local
-db.serialize(() => {
-    db.run(`
-        CREATE TABLE IF NOT EXISTS solicitacoes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            usuario TEXT,
-            descricao TEXT,
-            data_solicitacao DATETIME DEFAULT CURRENT_TIMESTAMP,
-            status TEXT DEFAULT 'Pendente'
-        )
-    `, (err) => {
-        if (err) {
-            console.error('Erro ao criar tabela de solicitações:', err.message);
-        } else {
-            console.log('Tabela de solicitações criada com sucesso.');
-        }
-    });
-});
-
-// Exportar o objeto de banco de dados para uso em outros lugares do aplicativo
-module.exports = db;
 
 app.post('/solicitar_cadastro_produto', (req, res) => {
     const { usuario, descricao } = req.body;
