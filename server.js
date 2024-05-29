@@ -5,6 +5,7 @@ const pgSession = require('connect-pg-simple')(session);
 const { body, validationResult } = require('express-validator');
 const { v4: uuidv4 } = require('uuid');
 const { Pool } = require('pg');
+const sqlite3 = require('sqlite3').verbose();
 const { sendNotificationEmail } = require('./emailSender');
 require("dotenv/config");
 
@@ -30,7 +31,7 @@ app.set('view engine', 'ejs');
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Configuração do banco de dados
-let pool;
+let db;
 if (process.env.NODE_ENV === 'production') {
     // Configuração para PostgreSQL em ambiente de produção
     const pool = new Pool({
