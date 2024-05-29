@@ -28,7 +28,6 @@
     "pg": "^8.11.5",
     "pm2": "^5.4.0",
     "sequelize-cli": "^6.2.0",
-    "sqlite3": "^5.1.7",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
