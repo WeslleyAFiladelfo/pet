@@ -10,7 +10,7 @@ const { sendNotificationEmail } = require('./emailSender');
 require("dotenv/config");
 
 const app = express();
-const port = process.env.PORT || 4000;
+const port = process.env.PORT || 3000;
 
 // Configuração da sessão com variável de ambiente
 const secretKey = process.env.SESSION_SECRET || 'sua_chave_secreta_aqui';
